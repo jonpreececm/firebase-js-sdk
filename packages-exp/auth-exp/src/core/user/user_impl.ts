@@ -16,7 +16,7 @@
  */
 
 import { Auth } from '../../model/auth';
-import { IdTokenResult } from '../../model/id_token';
+import { IdTokenResult, IdTokenResponse } from '../../model/id_token';
 import { User } from '../../model/user';
 import { PersistedBlob } from '../persistence';
 import { ProviderId } from '../providers';
@@ -122,5 +122,29 @@ export class UserImpl implements User {
       phoneNumber: assertType(phoneNumber, stringOrUndef, auth.name),
       photoURL: assertType(photoURL, stringOrUndef, auth.name)
     });
+  }
+
+  /**
+   * Initialize a User from an idToken server response
+   * @param auth
+   * @param idTokenResponse
+   */
+  static async _fromIdTokenResponse(
+    auth: Auth,
+    idTokenResponse: IdTokenResponse
+  ): Promise<User> {
+    const stsTokenManager = new StsTokenManager();
+    stsTokenManager.updateFromServerResponse(idTokenResponse);
+
+    // Initialize the Firebase Auth user.
+    const user = new UserImpl({
+      auth,
+      stsTokenManager,
+      uid: idTokenResponse.localId
+    });
+
+    // Updates the user info and data and resolves with a user instance.
+    await user.reload();
+    return user;
   }
 }
